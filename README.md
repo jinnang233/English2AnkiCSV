@@ -1,4 +1,5 @@
 # English2Anki
+[![Build and Release](https://github.com/jinnang233/English2Anki/actions/workflows/release.yml/badge.svg)](https://github.com/jinnang233/English2Anki/actions/workflows/release.yml)[![CodeQL](https://github.com/jinnang233/English2Anki/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/jinnang233/English2Anki/actions/workflows/github-code-scanning/codeql)
 
 一个 Rust 桌面程序，用于批量查询英文单词释义，保存为本地 JSON，并导出为 Anki 可导入的 UTF-8 TSV/CSV。
 
