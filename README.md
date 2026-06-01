@@ -27,11 +27,11 @@ cargo run
 项目包含 `.github/workflows/release.yml`，推送 `v*` 标签时会自动构建并发布 GitHub Release：
 
 ```powershell
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.2.1
+git push origin v0.2.1
 ```
 
-Actions 会构建 Windows、macOS 和 Linux 版本，并把压缩包上传到 Release。也可以在 GitHub Actions 页面手动运行 `Build and Release`，输入 `release_tag`，例如 `v0.2.0`。
+Actions 会构建 Windows、macOS 和 Linux 版本，并把压缩包上传到 Release。也可以在 GitHub Actions 页面手动运行 `Build and Release`，输入 `release_tag`，例如 `v0.2.1`。
 
 ## 数据源
 

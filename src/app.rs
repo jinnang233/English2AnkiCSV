@@ -35,6 +35,7 @@ pub struct English2AnkiApp {
     progress_done: usize,
     progress_total: usize,
     last_error: Option<String>,
+    show_startup_warning: bool,
     save_path: String,
     load_path: String,
     export_path: String,
@@ -92,6 +93,7 @@ impl English2AnkiApp {
             progress_done: 0,
             progress_total: 0,
             last_error: None,
+            show_startup_warning: true,
             save_path: "words.json".to_string(),
             load_path: "words.json".to_string(),
             export_path: "anki_export.tsv".to_string(),
@@ -248,6 +250,7 @@ impl English2AnkiApp {
 impl eframe::App for English2AnkiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.poll_query_messages(ctx);
+        self.render_startup_warning(ctx);
 
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -384,6 +387,41 @@ impl eframe::App for English2AnkiApp {
                 }
             });
         });
+    }
+}
+
+impl English2AnkiApp {
+    fn render_startup_warning(&mut self, ctx: &egui::Context) {
+        if !self.show_startup_warning {
+            return;
+        }
+
+        egui::Window::new("安全提醒")
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+            .show(ctx, |ui| {
+                ui.set_max_width(560.0);
+                ui.heading("请在使用前仔细阅读");
+                ui.separator();
+                ui.label(
+                    "本项目代码由 AI 辅助生成。使用、修改、发布或集成前，请务必进行人工审查，重点检查代码逻辑、网络请求、本地文件读写、依赖来源和许可证兼容性，并自行承担相应风险。",
+                );
+                ui.add_space(8.0);
+                ui.label(
+                    "在运行本项目的可执行文件前，建议先使用 VirusTotal 等工具扫描，并在沙盒环境中进行检查。本项目不能保证构建环境绝对干净安全；如果您对此有顾虑，请不要使用本软件。",
+                );
+                ui.add_space(8.0);
+                ui.label(
+                    "如果您发现任何代码安全问题、版权问题或许可证问题，请在 GitHub Issues 中提出。感谢您的理解。",
+                );
+                ui.add_space(12.0);
+                ui.horizontal(|ui| {
+                    if ui.button("我已了解").clicked() {
+                        self.show_startup_warning = false;
+                    }
+                });
+            });
     }
 }
 
