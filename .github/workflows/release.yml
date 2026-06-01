@@ -121,7 +121,10 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-
+      - name: Malware Scanner
+        uses: dell/common-github-actions/malware-scanner@main
+        with:
+          options: -ri
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
