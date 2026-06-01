@@ -15,7 +15,6 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
-    time::Duration,
 };
 use tokio::{runtime::Runtime, sync::mpsc};
 
@@ -28,8 +27,6 @@ pub struct English2AnkiApp {
     config_path: String,
     force_refresh: bool,
     concurrency: usize,
-    enable_query_delay: bool,
-    query_delay_ms: u64,
     entries: Vec<WordEntry>,
     statuses: HashMap<String, QueryLine>,
     runtime: Runtime,
@@ -87,8 +84,6 @@ impl English2AnkiApp {
             config_path: String::new(),
             force_refresh: false,
             concurrency: 4,
-            enable_query_delay: false,
-            query_delay_ms: 800,
             entries: Vec::new(),
             statuses: HashMap::new(),
             runtime: Runtime::new().expect("failed to create tokio runtime"),
@@ -181,11 +176,6 @@ impl English2AnkiApp {
         );
         let force_refresh = self.force_refresh;
         let concurrency = self.concurrency.max(1);
-        let query_delay_ms = if self.enable_query_delay {
-            self.query_delay_ms
-        } else {
-            0
-        };
         let (sender, receiver) = mpsc::unbounded_channel();
 
         self.receiver = Some(receiver);
@@ -197,8 +187,7 @@ impl English2AnkiApp {
         self.runtime.spawn(async move {
             let _ = sender.send(QueryMessage::Started { total: words.len() });
             stream::iter(words)
-                .enumerate()
-                .map(|(index, word)| {
+                .map(|word| {
                     let sender = sender.clone();
                     let provider = Arc::clone(&provider);
                     let existing = Arc::clone(&existing);
@@ -206,13 +195,6 @@ impl English2AnkiApp {
                         if !force_refresh && existing.contains_key(&word) {
                             let _ = sender.send(QueryMessage::Skipped(word));
                             return;
-                        }
-
-                        if query_delay_ms > 0 {
-                            tokio::time::sleep(Duration::from_millis(
-                                query_delay_ms.saturating_mul(index as u64),
-                            ))
-                            .await;
                         }
 
                         let result = provider.lookup(&word).await.unwrap_or_else(|error| {
@@ -311,11 +293,6 @@ impl eframe::App for English2AnkiApp {
                     ui.text_edit_singleline(&mut self.config_path);
                     ui.checkbox(&mut self.force_refresh, "强制刷新已有单词");
                     ui.add(egui::Slider::new(&mut self.concurrency, 1..=12).text("并发数"));
-                    ui.checkbox(&mut self.enable_query_delay, "启用查询延迟");
-                    ui.add_enabled(
-                        self.enable_query_delay,
-                        egui::Slider::new(&mut self.query_delay_ms, 0..=10_000).text("查询延迟 ms"),
-                    );
 
                     if ui
                         .add_enabled(!self.is_querying, egui::Button::new("开始查询"))
