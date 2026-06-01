@@ -22,7 +22,8 @@ pub struct English2AnkiApp {
     input_words: String,
     provider_kind: ProviderKind,
     api_key: String,
-    openai_model: String,
+    ai_model: String,
+    ai_api_base_url: String,
     config_path: String,
     force_refresh: bool,
     concurrency: usize,
@@ -58,8 +59,12 @@ enum QueryMessage {
 
 #[derive(Debug, Default, Deserialize)]
 struct FileConfig {
+    ai_api_key: Option<String>,
+    ai_model: Option<String>,
+    ai_api_base_url: Option<String>,
     openai_api_key: Option<String>,
     openai_model: Option<String>,
+    openai_api_base_url: Option<String>,
 }
 
 impl English2AnkiApp {
@@ -69,8 +74,13 @@ impl English2AnkiApp {
         Self {
             input_words: "apple, abandon, beautiful, network".to_string(),
             provider_kind: ProviderKind::Ecdict,
-            api_key: std::env::var("OPENAI_API_KEY").unwrap_or_default(),
-            openai_model: "gpt-4o-mini".to_string(),
+            api_key: std::env::var("AI_API_KEY")
+                .or_else(|_| std::env::var("OPENAI_API_KEY"))
+                .unwrap_or_default(),
+            ai_model: "gpt-4o-mini".to_string(),
+            ai_api_base_url: std::env::var("AI_API_BASE_URL")
+                .or_else(|_| std::env::var("OPENAI_API_BASE_URL"))
+                .unwrap_or_else(|_| "https://api.openai.com/v1".to_string()),
             config_path: String::new(),
             force_refresh: false,
             concurrency: 4,
@@ -147,7 +157,8 @@ impl English2AnkiApp {
         let provider = match build_provider(
             self.provider_kind,
             &self.api_key,
-            &self.openai_model,
+            &self.ai_model,
+            &self.ai_api_base_url,
             &self.config_path,
         ) {
             Ok(provider) => provider,
@@ -271,10 +282,12 @@ impl eframe::App for English2AnkiApp {
                         }
                     });
 
-                ui.label("OpenAI API Key");
+                ui.label("AI API Key");
                 ui.add(egui::TextEdit::singleline(&mut self.api_key).password(true));
-                ui.label("OpenAI 模型");
-                ui.text_edit_singleline(&mut self.openai_model);
+                ui.label("AI 模型");
+                ui.text_edit_singleline(&mut self.ai_model);
+                ui.label("AI API Base URL（OpenAI 兼容）");
+                ui.text_edit_singleline(&mut self.ai_api_base_url);
                 ui.label("配置文件路径（预留，可用于扩展 Provider 配置）");
                 ui.text_edit_singleline(&mut self.config_path);
                 ui.checkbox(&mut self.force_refresh, "强制刷新已有单词");
@@ -451,6 +464,7 @@ fn build_provider(
     kind: ProviderKind,
     api_key: &str,
     model: &str,
+    api_base_url: &str,
     config_path: &str,
 ) -> Result<Arc<dyn DictionaryProvider>, AppError> {
     match kind {
@@ -459,9 +473,20 @@ fn build_provider(
         ProviderKind::HttpDictionary => Ok(Arc::new(HttpDictionaryProvider::new()?)),
         ProviderKind::OpenAi => {
             let file_config = load_file_config(config_path)?;
-            let api_key = non_empty(api_key.to_string()).or(file_config.openai_api_key);
-            let model = non_empty(model.to_string()).or(file_config.openai_model);
-            Ok(Arc::new(OpenAiProvider::from_api_key(api_key, model)?))
+            let api_key = non_empty(api_key.to_string())
+                .or(file_config.ai_api_key)
+                .or(file_config.openai_api_key);
+            let model = non_empty(model.to_string())
+                .or(file_config.ai_model)
+                .or(file_config.openai_model);
+            let api_base_url = non_empty(api_base_url.to_string())
+                .or(file_config.ai_api_base_url)
+                .or(file_config.openai_api_base_url);
+            Ok(Arc::new(OpenAiProvider::from_config(
+                api_key,
+                model,
+                api_base_url,
+            )?))
         }
     }
 }

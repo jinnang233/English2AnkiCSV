@@ -1,7 +1,8 @@
 {
-  "openai_api_key": "",
-  "openai_model": "gpt-4o-mini",
+  "ai_api_key": "",
+  "ai_model": "gpt-4o-mini",
+  "ai_api_base_url": "https://api.openai.com/v1",
   "default_provider": "mock",
   "default_concurrency": 4,
-  "notes": "GUI 的配置文件路径会读取 openai_api_key 和 openai_model。也可以改用 OPENAI_API_KEY 环境变量。不要把真实 API Key 提交到仓库。"
+  "notes": "GUI 的配置文件路径会读取 ai_api_key、ai_model 和 ai_api_base_url。也可以使用 AI_API_KEY / AI_API_BASE_URL 环境变量。不要把真实 API Key 提交到仓库。"
 }

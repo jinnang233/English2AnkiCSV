@@ -38,7 +38,7 @@ pub trait DictionaryProvider: Send + Sync {
 - `EcdictProvider`：运行时下载 ECDICT CSV，本地缓存并查询，提供英文释义和中文释义。
 - `MockProvider`：离线可用，生成示例释义和例句。
 - `HttpDictionaryProvider`：调用 `https://api.dictionaryapi.dev`，可获取英文释义和例句，通常没有中文释义。
-- `OpenAiProvider`：调用 OpenAI Chat Completions API，生成结构化双语释义、音标和例句。
+- `OpenAiProvider`：调用 OpenAI 兼容的 Chat Completions API，生成结构化双语释义、音标和例句。可用于 OpenAI，也可配置为其他兼容服务。
 
 新增数据源时，在 `src/providers/` 新增模块并实现 `DictionaryProvider`，再在 `ProviderKind` 和 `build_provider` 中注册即可。
 
@@ -60,27 +60,39 @@ cargo run
 
 ECDICT 文件不会被嵌入程序二进制，Release 包里也不会包含词典数据。
 
-## OpenAI 配置
+## AI API 配置
 
 不要把 API Key 写入源码。可以使用任意一种方式：
 
 ```powershell
-$env:OPENAI_API_KEY="sk-..."
+$env:AI_API_KEY="sk-..."
+$env:AI_API_BASE_URL="https://api.openai.com/v1"
 cargo run
 ```
 
-也可以在 GUI 的 `OpenAI API Key` 输入框中填写。默认模型为 `gpt-4o-mini`，可在界面修改。
+也可以在 GUI 的 `AI API Key`、`AI 模型` 和 `AI API Base URL` 输入框中填写。默认模型为 `gpt-4o-mini`，默认 Base URL 为 `https://api.openai.com/v1`。
 
 还可以复制 `config.example.json`，填入：
 
 ```json
 {
-  "openai_api_key": "sk-...",
-  "openai_model": "gpt-4o-mini"
+  "ai_api_key": "sk-...",
+  "ai_model": "gpt-4o-mini",
+  "ai_api_base_url": "https://api.openai.com/v1"
 }
 ```
 
-然后在 GUI 的 `配置文件路径` 中选择该文件。读取优先级为：界面输入、配置文件、`OPENAI_API_KEY` 环境变量。
+然后在 GUI 的 `配置文件路径` 中选择该文件。读取优先级为：界面输入、配置文件、环境变量。旧字段 `openai_api_key`、`openai_model`、`openai_api_base_url` 仍然兼容。
+
+如果使用第三方 OpenAI 兼容服务，把 `ai_api_base_url` 改成该服务的 `/v1` 地址即可。例如：
+
+```json
+{
+  "ai_api_key": "your-key",
+  "ai_model": "deepseek-chat",
+  "ai_api_base_url": "https://api.deepseek.com/v1"
+}
+```
 
 ## JSON 存储
 

@@ -28,7 +28,7 @@ impl ProviderKind {
             Self::Ecdict => "ECDICT 本地词库",
             Self::Mock => "Mock Provider",
             Self::HttpDictionary => "Free Dictionary API",
-            Self::OpenAi => "OpenAI Provider",
+            Self::OpenAi => "AI API（OpenAI 兼容）",
         }
     }
 }
