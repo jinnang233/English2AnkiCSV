@@ -11,7 +11,11 @@ use crate::{
 use eframe::egui;
 use futures::{stream, StreamExt};
 use serde::Deserialize;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tokio::{runtime::Runtime, sync::mpsc};
 
 pub struct English2AnkiApp {
@@ -59,7 +63,9 @@ struct FileConfig {
 }
 
 impl English2AnkiApp {
-    pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        install_cjk_font(&cc.egui_ctx);
+
         Self {
             input_words: "apple, abandon, beautiful, network".to_string(),
             provider_kind: ProviderKind::Mock,
@@ -483,4 +489,55 @@ fn upsert_entry(entries: &mut Vec<WordEntry>, entry: WordEntry) {
     } else {
         entries.push(entry);
     }
+}
+
+fn install_cjk_font(ctx: &egui::Context) {
+    let Some((font_name, font_data)) = load_first_existing_font(cjk_font_candidates()) else {
+        eprintln!("No CJK font found. Chinese text may render as square boxes.");
+        return;
+    };
+
+    let mut fonts = egui::FontDefinitions::default();
+    fonts.font_data.insert(
+        font_name.clone(),
+        egui::FontData::from_owned(font_data).into(),
+    );
+
+    for family in [egui::FontFamily::Proportional, egui::FontFamily::Monospace] {
+        fonts
+            .families
+            .entry(family)
+            .or_default()
+            .insert(0, font_name.clone());
+    }
+
+    ctx.set_fonts(fonts);
+}
+
+fn load_first_existing_font(paths: &[&str]) -> Option<(String, Vec<u8>)> {
+    paths.iter().find_map(|path| {
+        let path = Path::new(path);
+        let bytes = std::fs::read(path).ok()?;
+        let name = path.file_stem()?.to_string_lossy().to_string();
+        Some((name, bytes))
+    })
+}
+
+fn cjk_font_candidates() -> &'static [&'static str] {
+    &[
+        // Windows
+        "C:/Windows/Fonts/msyh.ttc",
+        "C:/Windows/Fonts/msyh.ttf",
+        "C:/Windows/Fonts/simhei.ttf",
+        "C:/Windows/Fonts/simsun.ttc",
+        // macOS
+        "/System/Library/Fonts/PingFang.ttc",
+        "/System/Library/Fonts/STHeiti Light.ttc",
+        "/System/Library/Fonts/STHeiti Medium.ttc",
+        // Linux
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    ]
 }
