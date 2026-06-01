@@ -186,17 +186,7 @@ fn render_row(
         ],
         AnkiExportTemplate::ChineseToEnglish => vec![
             chinese_prompt(entry, options),
-            fields_text(
-                entry,
-                &[
-                    AnkiField::Word,
-                    AnkiField::Phonetic,
-                    AnkiField::PartOfSpeech,
-                    AnkiField::EnglishDefinition,
-                    AnkiField::Examples,
-                ],
-                options,
-            ),
+            fields_text(entry, &chinese_to_english_back_fields(options), options),
         ],
         AnkiExportTemplate::TypeAnswer => vec![
             chinese_prompt(entry, options),
@@ -245,6 +235,15 @@ fn fields_text(entry: &WordEntry, fields: &[AnkiField], options: &AnkiExportOpti
         })
         .collect::<Vec<_>>()
         .join("<br>")
+}
+
+fn chinese_to_english_back_fields(options: &AnkiExportOptions) -> Vec<AnkiField> {
+    let mut fields = vec![AnkiField::Word, AnkiField::Phonetic];
+    if options.include_part_of_speech_hint {
+        fields.push(AnkiField::PartOfSpeech);
+    }
+    fields.extend([AnkiField::EnglishDefinition, AnkiField::Examples]);
+    fields
 }
 
 fn definitions_text(definitions: &[Definition], options: &AnkiExportOptions) -> String {

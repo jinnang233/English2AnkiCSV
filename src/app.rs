@@ -401,7 +401,7 @@ fn render_anki_settings(ui: &mut egui::Ui, app: &mut English2AnkiApp) {
     ui.checkbox(&mut app.export_options.include_source, "包含来源");
     ui.checkbox(
         &mut app.export_options.include_part_of_speech_hint,
-        "中文反向卡正面显示词性提示",
+        "中文到英文反向卡包含词性",
     );
 
     ui.collapsing("Basic 正面字段", |ui| {
