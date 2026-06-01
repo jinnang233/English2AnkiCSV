@@ -2,6 +2,14 @@
 
 一个 Rust 桌面程序，用于批量查询英文单词释义，保存为本地 JSON，并导出为 Anki 可导入的 UTF-8 TSV/CSV。
 
+## 注意
+
+本项目代码由 AI 辅助生成。使用、修改、发布或集成前，请仔细审查代码逻辑、网络请求、本地文件读写、依赖来源和许可证兼容性，并自行承担相应风险。
+
+## 许可证
+
+本项目使用 0BSD 许可证，详见 `LICENSE`。
+
 ## 运行
 
 ```powershell
@@ -15,11 +23,11 @@ cargo run
 项目包含 `.github/workflows/release.yml`，推送 `v*` 标签时会自动构建并发布 GitHub Release：
 
 ```powershell
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
-Actions 会构建 Windows、macOS 和 Linux 版本，并把压缩包上传到 Release。也可以在 GitHub Actions 页面手动运行 `Build and Release`，输入 `release_tag`，例如 `v0.1.0`。
+Actions 会构建 Windows、macOS 和 Linux 版本，并把压缩包上传到 Release。也可以在 GitHub Actions 页面手动运行 `Build and Release`，输入 `release_tag`，例如 `v0.2.0`。
 
 ## 数据源
 
