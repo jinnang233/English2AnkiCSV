@@ -15,6 +15,7 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
+    time::Duration,
 };
 use tokio::{runtime::Runtime, sync::mpsc};
 
@@ -27,6 +28,8 @@ pub struct English2AnkiApp {
     config_path: String,
     force_refresh: bool,
     concurrency: usize,
+    enable_query_delay: bool,
+    query_delay_ms: u64,
     entries: Vec<WordEntry>,
     statuses: HashMap<String, QueryLine>,
     runtime: Runtime,
@@ -84,6 +87,8 @@ impl English2AnkiApp {
             config_path: String::new(),
             force_refresh: false,
             concurrency: 4,
+            enable_query_delay: false,
+            query_delay_ms: 800,
             entries: Vec::new(),
             statuses: HashMap::new(),
             runtime: Runtime::new().expect("failed to create tokio runtime"),
@@ -176,6 +181,11 @@ impl English2AnkiApp {
         );
         let force_refresh = self.force_refresh;
         let concurrency = self.concurrency.max(1);
+        let query_delay_ms = if self.enable_query_delay {
+            self.query_delay_ms
+        } else {
+            0
+        };
         let (sender, receiver) = mpsc::unbounded_channel();
 
         self.receiver = Some(receiver);
@@ -187,7 +197,8 @@ impl English2AnkiApp {
         self.runtime.spawn(async move {
             let _ = sender.send(QueryMessage::Started { total: words.len() });
             stream::iter(words)
-                .map(|word| {
+                .enumerate()
+                .map(|(index, word)| {
                     let sender = sender.clone();
                     let provider = Arc::clone(&provider);
                     let existing = Arc::clone(&existing);
@@ -195,6 +206,13 @@ impl English2AnkiApp {
                         if !force_refresh && existing.contains_key(&word) {
                             let _ = sender.send(QueryMessage::Skipped(word));
                             return;
+                        }
+
+                        if query_delay_ms > 0 {
+                            tokio::time::sleep(Duration::from_millis(
+                                query_delay_ms.saturating_mul(index as u64),
+                            ))
+                            .await;
                         }
 
                         let result = provider.lookup(&word).await.unwrap_or_else(|error| {
@@ -266,61 +284,68 @@ impl eframe::App for English2AnkiApp {
             .resizable(true)
             .default_width(330.0)
             .show(ctx, |ui| {
-                ui.heading("查询");
-                ui.label("英文逗号分割的单词列表");
-                ui.add(
-                    egui::TextEdit::multiline(&mut self.input_words)
-                        .desired_rows(5)
-                        .desired_width(f32::INFINITY),
-                );
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.heading("查询");
+                    ui.label("英文逗号分割的单词列表");
+                    ui.add(
+                        egui::TextEdit::multiline(&mut self.input_words)
+                            .desired_rows(5)
+                            .desired_width(f32::INFINITY),
+                    );
 
-                egui::ComboBox::from_label("数据源")
-                    .selected_text(self.provider_kind.label())
-                    .show_ui(ui, |ui| {
-                        for kind in ProviderKind::ALL {
-                            ui.selectable_value(&mut self.provider_kind, kind, kind.label());
-                        }
-                    });
+                    egui::ComboBox::from_label("数据源")
+                        .selected_text(self.provider_kind.label())
+                        .show_ui(ui, |ui| {
+                            for kind in ProviderKind::ALL {
+                                ui.selectable_value(&mut self.provider_kind, kind, kind.label());
+                            }
+                        });
 
-                ui.label("AI API Key");
-                ui.add(egui::TextEdit::singleline(&mut self.api_key).password(true));
-                ui.label("AI 模型");
-                ui.text_edit_singleline(&mut self.ai_model);
-                ui.label("AI API Base URL（OpenAI 兼容）");
-                ui.text_edit_singleline(&mut self.ai_api_base_url);
-                ui.label("配置文件路径（预留，可用于扩展 Provider 配置）");
-                ui.text_edit_singleline(&mut self.config_path);
-                ui.checkbox(&mut self.force_refresh, "强制刷新已有单词");
-                ui.add(egui::Slider::new(&mut self.concurrency, 1..=12).text("并发数"));
+                    ui.label("AI API Key");
+                    ui.add(egui::TextEdit::singleline(&mut self.api_key).password(true));
+                    ui.label("AI 模型");
+                    ui.text_edit_singleline(&mut self.ai_model);
+                    ui.label("AI API Base URL（OpenAI 兼容）");
+                    ui.text_edit_singleline(&mut self.ai_api_base_url);
+                    ui.label("配置文件路径（预留，可用于扩展 Provider 配置）");
+                    ui.text_edit_singleline(&mut self.config_path);
+                    ui.checkbox(&mut self.force_refresh, "强制刷新已有单词");
+                    ui.add(egui::Slider::new(&mut self.concurrency, 1..=12).text("并发数"));
+                    ui.checkbox(&mut self.enable_query_delay, "启用查询延迟");
+                    ui.add_enabled(
+                        self.enable_query_delay,
+                        egui::Slider::new(&mut self.query_delay_ms, 0..=10_000).text("查询延迟 ms"),
+                    );
 
-                if ui
-                    .add_enabled(!self.is_querying, egui::Button::new("开始查询"))
-                    .clicked()
-                {
-                    self.start_query();
-                }
+                    if ui
+                        .add_enabled(!self.is_querying, egui::Button::new("开始查询"))
+                        .clicked()
+                    {
+                        self.start_query();
+                    }
 
-                ui.separator();
-                ui.heading("JSON");
-                path_row(ui, "保存路径", &mut self.save_path, true);
-                if ui.button("保存 JSON").clicked() {
-                    self.save_json();
-                }
-                path_row(ui, "加载路径", &mut self.load_path, false);
-                if ui.button("加载 JSON").clicked() {
-                    self.load_json();
-                }
+                    ui.separator();
+                    ui.heading("JSON");
+                    path_row(ui, "保存路径", &mut self.save_path, true);
+                    if ui.button("保存 JSON").clicked() {
+                        self.save_json();
+                    }
+                    path_row(ui, "加载路径", &mut self.load_path, false);
+                    if ui.button("加载 JSON").clicked() {
+                        self.load_json();
+                    }
 
-                ui.separator();
-                render_anki_settings(ui, self);
+                    ui.separator();
+                    render_anki_settings(ui, self);
 
-                ui.separator();
-                ui.heading("消息");
-                if let Some(error) = &self.last_error {
-                    ui.label(error);
-                } else {
-                    ui.label("无错误");
-                }
+                    ui.separator();
+                    ui.heading("消息");
+                    if let Some(error) = &self.last_error {
+                        ui.label(error);
+                    } else {
+                        ui.label("无错误");
+                    }
+                });
             });
 
         egui::CentralPanel::default().show(ctx, |ui| {
