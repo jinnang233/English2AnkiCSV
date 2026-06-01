@@ -14,4 +14,6 @@ pub enum AppError {
     Config(String),
     #[error("数据解析错误: {0}")]
     Parse(String),
+    #[error("Provider 错误: {0}")]
+    Provider(String),
 }

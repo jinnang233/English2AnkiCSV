@@ -8,7 +8,7 @@
 cargo run
 ```
 
-默认选择 `Mock Provider`，不需要网络或 API Key，适合先验证 GUI、JSON 保存和 Anki 导出流程。
+默认选择 `ECDICT 本地词库`。第一次查询时程序会下载 ECDICT CSV 到本地缓存目录，之后会直接使用本地词库查询。
 
 ## GitHub Actions 发布
 
@@ -35,11 +35,30 @@ pub trait DictionaryProvider: Send + Sync {
 
 已实现 Provider：
 
+- `EcdictProvider`：运行时下载 ECDICT CSV，本地缓存并查询，提供英文释义和中文释义。
 - `MockProvider`：离线可用，生成示例释义和例句。
 - `HttpDictionaryProvider`：调用 `https://api.dictionaryapi.dev`，可获取英文释义和例句，通常没有中文释义。
 - `OpenAiProvider`：调用 OpenAI Chat Completions API，生成结构化双语释义、音标和例句。
 
 新增数据源时，在 `src/providers/` 新增模块并实现 `DictionaryProvider`，再在 `ProviderKind` 和 `build_provider` 中注册即可。
+
+### ECDICT 本地词库
+
+默认下载地址：
+
+```text
+https://raw.githubusercontent.com/skywind3000/ECDICT/master/ecdict.csv
+```
+
+默认缓存位置为系统用户缓存目录下的 `English2Anki/dictionaries/ecdict.csv`。可以用环境变量覆盖：
+
+```powershell
+$env:ECDICT_CSV_URL="https://example.com/ecdict.csv"
+$env:ECDICT_CACHE_PATH="D:\Dictionaries\ecdict.csv"
+cargo run
+```
+
+ECDICT 文件不会被嵌入程序二进制，Release 包里也不会包含词典数据。
 
 ## OpenAI 配置
 

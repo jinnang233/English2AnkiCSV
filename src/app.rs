@@ -3,8 +3,8 @@ use crate::{
     error::AppError,
     models::{parse_words, QueryStatus, WordEntry},
     providers::{
-        http_dictionary::HttpDictionaryProvider, mock::MockProvider, openai::OpenAiProvider,
-        DictionaryProvider, ProviderKind,
+        ecdict::EcdictProvider, http_dictionary::HttpDictionaryProvider, mock::MockProvider,
+        openai::OpenAiProvider, DictionaryProvider, ProviderKind,
     },
     storage,
 };
@@ -68,7 +68,7 @@ impl English2AnkiApp {
 
         Self {
             input_words: "apple, abandon, beautiful, network".to_string(),
-            provider_kind: ProviderKind::Mock,
+            provider_kind: ProviderKind::Ecdict,
             api_key: std::env::var("OPENAI_API_KEY").unwrap_or_default(),
             openai_model: "gpt-4o-mini".to_string(),
             config_path: String::new(),
@@ -454,6 +454,7 @@ fn build_provider(
     config_path: &str,
 ) -> Result<Arc<dyn DictionaryProvider>, AppError> {
     match kind {
+        ProviderKind::Ecdict => Ok(Arc::new(EcdictProvider::new())),
         ProviderKind::Mock => Ok(Arc::new(MockProvider)),
         ProviderKind::HttpDictionary => Ok(Arc::new(HttpDictionaryProvider::new()?)),
         ProviderKind::OpenAi => {
