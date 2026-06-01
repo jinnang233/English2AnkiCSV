@@ -1,0 +1,6 @@
+/target/
+/dist/
+*.pdb
+words.json
+anki_export.tsv
+anki_export.csv
