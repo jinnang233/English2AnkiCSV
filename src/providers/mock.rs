@@ -21,17 +21,20 @@ impl DictionaryProvider for MockProvider {
             phonetic: Some(format!("/{word}/")),
             definitions: vec![Definition {
                 part_of_speech: Some("n.".to_string()),
-                english: Some(format!("A mock definition for the word \"{word}\".")),
-                chinese: Some(chinese.to_string()),
+                source: Some(format!("A mock definition for the word \"{word}\".")),
+                target: Some(chinese.to_string()),
             }],
             examples: vec![Example {
-                english: example_english.to_string(),
-                chinese: Some(example_chinese.to_string()),
+                source: example_english.to_string(),
+                target: Some(example_chinese.to_string()),
             }],
             source: self.name().to_string(),
             queried_at: chrono::Utc::now().to_rfc3339(),
             status: QueryStatus::Success,
             error: None,
+            ai_status: None,
+            ai_reason: None,
+            query_type: None,
         })
     }
 }

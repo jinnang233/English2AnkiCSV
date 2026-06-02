@@ -54,13 +54,13 @@ impl DictionaryProvider for HttpDictionaryProvider {
             for item in &meaning.definitions {
                 definitions.push(Definition {
                     part_of_speech: Some(meaning.part_of_speech.clone()),
-                    english: Some(item.definition.clone()),
-                    chinese: None,
+                    source: Some(item.definition.clone()),
+                    target: None,
                 });
                 if let Some(example) = &item.example {
                     examples.push(Example {
-                        english: example.clone(),
-                        chinese: None,
+                        source: example.clone(),
+                        target: None,
                     });
                 }
             }
@@ -75,6 +75,9 @@ impl DictionaryProvider for HttpDictionaryProvider {
             queried_at: chrono::Utc::now().to_rfc3339(),
             status: QueryStatus::Success,
             error: None,
+            ai_status: None,
+            ai_reason: None,
+            query_type: None,
         })
     }
 }

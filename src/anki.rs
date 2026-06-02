@@ -21,6 +21,7 @@ impl AnkiExportTemplate {
         Self::TypeAnswer,
     ];
 
+    #[allow(dead_code)]
     pub fn label(self) -> &'static str {
         match self {
             Self::Detailed => "词条详情模板",
@@ -38,6 +39,7 @@ pub enum AnkiExportFormat {
 }
 
 impl AnkiExportFormat {
+    #[allow(dead_code)]
     pub fn label(self) -> &'static str {
         match self {
             Self::Tsv => "TSV",
@@ -70,6 +72,7 @@ impl AnkiField {
         Self::Source,
     ];
 
+    #[allow(dead_code)]
     pub fn label(self) -> &'static str {
         match self {
             Self::Word => "单词",
@@ -217,10 +220,10 @@ fn fields_text(entry: &WordEntry, fields: &[AnkiField], options: &AnkiExportOpti
                 }
                 AnkiField::PartOfSpeech => part_of_speech_text(&entry.definitions),
                 AnkiField::EnglishDefinition if options.include_english_definition => {
-                    english_definitions_text(&entry.definitions)
+                    source_definitions_text(&entry.definitions)
                 }
                 AnkiField::ChineseDefinition if options.include_chinese_definition => {
-                    chinese_definitions_text(&entry.definitions)
+                    target_definitions_text(&entry.definitions)
                 }
                 AnkiField::Examples if options.include_examples => {
                     examples_text(&entry.examples, false)
@@ -255,13 +258,13 @@ fn definitions_text(definitions: &[Definition], options: &AnkiExportOptions) -> 
                 parts.push(pos.clone());
             }
             if options.include_chinese_definition {
-                if let Some(chinese) = &definition.chinese {
-                    parts.push(chinese.clone());
+                if let Some(target) = &definition.target {
+                    parts.push(target.clone());
                 }
             }
             if options.include_english_definition {
-                if let Some(english) = &definition.english {
-                    parts.push(english.clone());
+                if let Some(source) = &definition.source {
+                    parts.push(source.clone());
                 }
             }
             parts.join(" ")
@@ -271,18 +274,18 @@ fn definitions_text(definitions: &[Definition], options: &AnkiExportOptions) -> 
         .join("<br>")
 }
 
-fn english_definitions_text(definitions: &[Definition]) -> String {
+fn source_definitions_text(definitions: &[Definition]) -> String {
     definitions
         .iter()
-        .filter_map(|d| d.english.as_deref())
+        .filter_map(|d| d.source.as_deref())
         .collect::<Vec<_>>()
         .join("; ")
 }
 
-fn chinese_definitions_text(definitions: &[Definition]) -> String {
+fn target_definitions_text(definitions: &[Definition]) -> String {
     definitions
         .iter()
-        .filter_map(|d| d.chinese.as_deref())
+        .filter_map(|d| d.target.as_deref())
         .collect::<Vec<_>>()
         .join("; ")
 }
@@ -302,11 +305,11 @@ fn examples_text(examples: &[Example], translations_only: bool) -> String {
         .iter()
         .filter_map(|example| {
             if translations_only {
-                example.chinese.clone()
-            } else if example.english.trim().is_empty() {
+                example.target.clone()
+            } else if example.source.trim().is_empty() {
                 None
             } else {
-                Some(format!("Example: {}", example.english))
+                Some(format!("Example: {}", example.source))
             }
         })
         .collect::<Vec<_>>()
@@ -318,21 +321,21 @@ fn chinese_prompt(entry: &WordEntry, options: &AnkiExportOptions) -> String {
         .definitions
         .iter()
         .filter_map(|definition| {
-            let chinese = definition.chinese.as_ref()?;
+            let target = definition.target.as_ref()?;
             if options.include_part_of_speech_hint {
                 Some(match &definition.part_of_speech {
-                    Some(pos) => format!("{pos}. {chinese}"),
-                    None => chinese.clone(),
+                    Some(pos) => format!("{pos}. {target}"),
+                    None => target.clone(),
                 })
             } else {
-                Some(chinese.clone())
+                Some(target.clone())
             }
         })
         .collect::<Vec<_>>()
         .join("; ");
 
     if definitions.is_empty() {
-        english_definitions_text(&entry.definitions)
+        source_definitions_text(&entry.definitions)
     } else {
         definitions
     }

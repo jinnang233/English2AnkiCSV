@@ -22,14 +22,18 @@ impl std::fmt::Display for QueryStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Definition {
     pub part_of_speech: Option<String>,
-    pub english: Option<String>,
-    pub chinese: Option<String>,
+    #[serde(default, alias = "english")]
+    pub source: Option<String>,
+    #[serde(default, alias = "chinese")]
+    pub target: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Example {
-    pub english: String,
-    pub chinese: Option<String>,
+    #[serde(default, alias = "english")]
+    pub source: String,
+    #[serde(default, alias = "chinese")]
+    pub target: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +46,12 @@ pub struct WordEntry {
     pub queried_at: String,
     pub status: QueryStatus,
     pub error: Option<String>,
+    #[serde(default)]
+    pub ai_status: Option<String>,
+    #[serde(default)]
+    pub ai_reason: Option<String>,
+    #[serde(default)]
+    pub query_type: Option<String>,
 }
 
 impl WordEntry {
@@ -59,7 +69,22 @@ impl WordEntry {
             queried_at: chrono::Utc::now().to_rfc3339(),
             status: QueryStatus::Failed,
             error: Some(error.into()),
+            ai_status: None,
+            ai_reason: None,
+            query_type: None,
         }
+    }
+
+    pub fn with_ai_result(
+        mut self,
+        ai_status: Option<String>,
+        ai_reason: Option<String>,
+        query_type: Option<String>,
+    ) -> Self {
+        self.ai_status = ai_status;
+        self.ai_reason = ai_reason;
+        self.query_type = query_type;
+        self
     }
 }
 

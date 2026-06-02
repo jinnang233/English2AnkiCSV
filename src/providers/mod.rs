@@ -22,13 +22,4 @@ pub enum ProviderKind {
 
 impl ProviderKind {
     pub const ALL: [Self; 4] = [Self::Ecdict, Self::Mock, Self::HttpDictionary, Self::OpenAi];
-
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Ecdict => "ECDICT 本地词库",
-            Self::Mock => "Mock Provider",
-            Self::HttpDictionary => "Free Dictionary API",
-            Self::OpenAi => "AI API（OpenAI 兼容）",
-        }
-    }
 }

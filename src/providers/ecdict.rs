@@ -88,6 +88,9 @@ impl DictionaryProvider for EcdictProvider {
             queried_at: chrono::Utc::now().to_rfc3339(),
             status,
             error,
+            ai_status: None,
+            ai_reason: None,
+            query_type: None,
         })
     }
 }
@@ -156,11 +159,11 @@ fn build_definitions(record: &EcdictRecord) -> Vec<Definition> {
 
             Definition {
                 part_of_speech: part_of_speech.or_else(|| fallback_pos.clone()),
-                english,
-                chinese,
+                source: english,
+                target: chinese,
             }
         })
-        .filter(|definition| definition.english.is_some() || definition.chinese.is_some())
+        .filter(|definition| definition.source.is_some() || definition.target.is_some())
         .collect()
 }
 
