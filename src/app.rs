@@ -981,7 +981,7 @@ fn build_provider(
 ) -> Result<Arc<dyn DictionaryProvider>, AppError> {
     match kind {
         ProviderKind::Ecdict => Ok(Arc::new(EcdictProvider::new())),
-        ProviderKind::Mock => Ok(Arc::new(MockProvider)),
+        ProviderKind::Mock => Ok(Arc::new(MockProvider::new()?)),
         ProviderKind::HttpDictionary => Ok(Arc::new(HttpDictionaryProvider::new()?)),
         ProviderKind::OpenAi => {
             let file_config = load_file_config(config_path)?;

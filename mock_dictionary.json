@@ -1,0 +1,83 @@
+{
+  "entries": {
+    "apple": {
+      "phonetic": "/apple/",
+      "definitions": [
+        {
+          "part_of_speech": "n.",
+          "source": "A round fruit that grows on an apple tree.",
+          "target": "苹果；苹果树"
+        }
+      ],
+      "examples": [
+        {
+          "source": "I ate an apple after lunch.",
+          "target": "午饭后我吃了一个苹果。"
+        }
+      ]
+    },
+    "abandon": {
+      "phonetic": "/abandon/",
+      "definitions": [
+        {
+          "part_of_speech": "v.",
+          "source": "To leave something or someone behind.",
+          "target": "放弃；抛弃"
+        }
+      ],
+      "examples": [
+        {
+          "source": "They had to abandon the old plan.",
+          "target": "他们不得不放弃原来的计划。"
+        }
+      ]
+    },
+    "beautiful": {
+      "phonetic": "/beautiful/",
+      "definitions": [
+        {
+          "part_of_speech": "adj.",
+          "source": "Pleasing to look at or experience.",
+          "target": "美丽的；出色的"
+        }
+      ],
+      "examples": [
+        {
+          "source": "The garden looks beautiful in spring.",
+          "target": "春天的花园看起来很美。"
+        }
+      ]
+    },
+    "network": {
+      "phonetic": "/network/",
+      "definitions": [
+        {
+          "part_of_speech": "n.",
+          "source": "A connected system of people, computers, or things.",
+          "target": "网络；人际网"
+        }
+      ],
+      "examples": [
+        {
+          "source": "The company built a secure network.",
+          "target": "公司搭建了一个安全的网络。"
+        }
+      ]
+    }
+  },
+  "default_entry": {
+    "definitions": [
+      {
+        "part_of_speech": "n.",
+        "source": "A mock definition for the word \"{word}\".",
+        "target": "示例释义"
+      }
+    ],
+    "examples": [
+      {
+        "source": "This is a clear example sentence for {word}.",
+        "target": "这是一个关于 {word} 的清晰例句。"
+      }
+    ]
+  }
+}

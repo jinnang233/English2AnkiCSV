@@ -4,8 +4,44 @@ use crate::{
     providers::DictionaryProvider,
 };
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, path::Path};
 
-pub struct MockProvider;
+const MOCK_DICTIONARY_FILE: &str = "mock_dictionary.json";
+const DEFAULT_MOCK_DICTIONARY_JSON: &str = include_str!("../../mock_dictionary.json");
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct MockDictionary {
+    #[serde(default)]
+    entries: HashMap<String, MockEntry>,
+    default_entry: MockEntry,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct MockEntry {
+    #[serde(default)]
+    phonetic: Option<String>,
+    #[serde(default)]
+    definitions: Vec<Definition>,
+    #[serde(default)]
+    examples: Vec<Example>,
+}
+
+pub struct MockProvider {
+    dictionary: MockDictionary,
+}
+
+impl MockProvider {
+    pub fn new() -> Result<Self, AppError> {
+        let path = std::env::current_dir()?.join(MOCK_DICTIONARY_FILE);
+        ensure_mock_dictionary_file(&path)?;
+
+        let content = std::fs::read_to_string(&path)?;
+        let dictionary = normalize_dictionary(serde_json::from_str(&content)?);
+
+        Ok(Self { dictionary })
+    }
+}
 
 #[async_trait]
 impl DictionaryProvider for MockProvider {
@@ -14,20 +50,18 @@ impl DictionaryProvider for MockProvider {
     }
 
     async fn lookup(&self, word: &str) -> Result<WordEntry, AppError> {
-        let (chinese, example_english, example_chinese) = mock_content(word);
+        let key = word.to_lowercase();
+        let entry = self
+            .dictionary
+            .entries
+            .get(&key)
+            .unwrap_or(&self.dictionary.default_entry);
 
         Ok(WordEntry {
             word: word.to_string(),
-            phonetic: Some(format!("/{word}/")),
-            definitions: vec![Definition {
-                part_of_speech: Some("n.".to_string()),
-                source: Some(format!("A mock definition for the word \"{word}\".")),
-                target: Some(chinese.to_string()),
-            }],
-            examples: vec![Example {
-                source: example_english.to_string(),
-                target: Some(example_chinese.to_string()),
-            }],
+            phonetic: entry.phonetic.clone().or_else(|| Some(format!("/{word}/"))),
+            definitions: render_definitions(&entry.definitions, word),
+            examples: render_examples(&entry.examples, word),
             source: self.name().to_string(),
             queried_at: chrono::Utc::now().to_rfc3339(),
             status: QueryStatus::Success,
@@ -39,32 +73,48 @@ impl DictionaryProvider for MockProvider {
     }
 }
 
-fn mock_content(word: &str) -> (&'static str, &'static str, &'static str) {
-    match word.to_lowercase().as_str() {
-        "apple" => (
-            "苹果；苹果树",
-            "I ate an apple after lunch.",
-            "午饭后我吃了一个苹果。",
-        ),
-        "abandon" => (
-            "放弃；抛弃",
-            "They had to abandon the old plan.",
-            "他们不得不放弃原来的计划。",
-        ),
-        "beautiful" => (
-            "美丽的；出色的",
-            "The garden looks beautiful in spring.",
-            "春天的花园看起来很美。",
-        ),
-        "network" => (
-            "网络；人际网",
-            "The company built a secure network.",
-            "公司搭建了一个安全的网络。",
-        ),
-        _ => (
-            "示例释义",
-            "This is a clear example sentence.",
-            "这是一个清晰的例句。",
-        ),
+fn ensure_mock_dictionary_file(path: &Path) -> Result<(), AppError> {
+    if path.exists() {
+        return Ok(());
     }
+
+    std::fs::write(path, DEFAULT_MOCK_DICTIONARY_JSON)?;
+    Ok(())
+}
+
+fn normalize_dictionary(mut dictionary: MockDictionary) -> MockDictionary {
+    dictionary.entries = dictionary
+        .entries
+        .into_iter()
+        .map(|(word, entry)| (word.to_lowercase(), entry))
+        .collect();
+    dictionary
+}
+
+fn render_definitions(definitions: &[Definition], word: &str) -> Vec<Definition> {
+    definitions
+        .iter()
+        .cloned()
+        .map(|mut definition| {
+            definition.source = definition.source.map(|value| render_template(&value, word));
+            definition.target = definition.target.map(|value| render_template(&value, word));
+            definition
+        })
+        .collect()
+}
+
+fn render_examples(examples: &[Example], word: &str) -> Vec<Example> {
+    examples
+        .iter()
+        .cloned()
+        .map(|mut example| {
+            example.source = render_template(&example.source, word);
+            example.target = example.target.map(|value| render_template(&value, word));
+            example
+        })
+        .collect()
+}
+
+fn render_template(value: &str, word: &str) -> String {
+    value.replace("{word}", word)
 }
