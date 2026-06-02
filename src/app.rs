@@ -958,16 +958,40 @@ fn path_row(ui: &mut egui::Ui, label: &str, path: &mut String, save: bool, choos
     ui.horizontal(|ui| {
         ui.text_edit_singleline(path);
         if ui.button(choose_label).clicked() {
+            let dialog = file_dialog_for_path(path);
             let selected = if save {
-                rfd::FileDialog::new().save_file()
+                dialog.save_file()
             } else {
-                rfd::FileDialog::new().pick_file()
+                dialog.pick_file()
             };
             if let Some(selected) = selected {
                 *path = selected.display().to_string();
             }
         }
     });
+}
+
+fn file_dialog_for_path(path: &str) -> rfd::FileDialog {
+    let mut dialog = rfd::FileDialog::new()
+        .add_filter("JSON (*.json)", &["json"])
+        .add_filter("Anki TSV (*.tsv)", &["tsv"])
+        .add_filter("CSV (*.csv)", &["csv"])
+        .add_filter("All files (*.*)", &["*"]);
+
+    let path = Path::new(path.trim());
+    if let Some(file_name) = path.file_name().and_then(|file_name| file_name.to_str()) {
+        if !file_name.is_empty() {
+            dialog = dialog.set_file_name(file_name);
+        }
+    }
+    if let Some(parent) = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
+        dialog = dialog.set_directory(parent);
+    }
+
+    dialog
 }
 
 fn build_provider(
