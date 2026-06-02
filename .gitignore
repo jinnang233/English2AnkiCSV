@@ -1,5 +1,6 @@
 /target/
 /dist/
+/Cargo.lock
 *.pdb
 words.json
 anki_export.tsv
