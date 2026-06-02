@@ -86,14 +86,19 @@ jobs:
           version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
           echo "PACKAGE_VERSION=${version}" >> "${GITHUB_ENV}"
           echo "ARCHIVE_NAME=${APP_NAME}-${version}-${{ matrix.name }}" >> "${GITHUB_ENV}"
-
+      - name: VirusTotal Scan
+        uses: crazy-max/ghaction-virustotal@v5
+        with:
+          vt_api_key: ${{ secrets.VT_API_KEY }}
+          files: |
+            target/release/${{ matrix.binary_name }}
       - name: Prepare package directory
         shell: bash
         run: |
           mkdir -p "dist/${{ matrix.artifact_name }}"
           cp "target/release/${{ matrix.binary_name }}" "dist/${{ matrix.artifact_name }}/"
           cp README.md config.example.json "dist/${{ matrix.artifact_name }}/"
-
+      
       - name: Create Windows archive
         if: runner.os == 'Windows'
         shell: pwsh
@@ -108,7 +113,7 @@ jobs:
         shell: bash
         run: |
           tar -czf "dist/${ARCHIVE_NAME}.tar.gz" -C "dist/${{ matrix.artifact_name }}" .
-
+    
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -128,13 +133,7 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-      - name: VirusTotal Scan
-        uses: crazy-max/ghaction-virustotal@v5
-        with:
-          vt_api_key: ${{ secrets.VT_API_KEY }}
-          files: |
-            dist/*.zip
-            dist/*.tar.gz
+      
       - name: Sign release artifacts
         shell: bash
         env:
