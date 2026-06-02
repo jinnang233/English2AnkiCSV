@@ -1046,35 +1046,63 @@ fn upsert_entry(entries: &mut Vec<WordEntry>, entry: WordEntry) {
 }
 
 fn install_cjk_font(ctx: &egui::Context) {
-    let Some((font_name, font_data)) = load_first_existing_font(cjk_font_candidates()) else {
-        eprintln!("No CJK font found. Chinese text may render as square boxes.");
-        return;
-    };
-
     let mut fonts = egui::FontDefinitions::default();
-    fonts.font_data.insert(
-        font_name.clone(),
-        egui::FontData::from_owned(font_data).into(),
-    );
+    let mut loaded_font_names = Vec::new();
+
+    for (font_name, font_data) in load_existing_fonts(phonetic_font_candidates())
+        .into_iter()
+        .chain(load_existing_fonts(cjk_font_candidates()))
+    {
+        fonts.font_data.insert(
+            font_name.clone(),
+            egui::FontData::from_owned(font_data).into(),
+        );
+        loaded_font_names.push(font_name);
+    }
+
+    if loaded_font_names.is_empty() {
+        eprintln!("No app fallback font found. Some text may render as square boxes.");
+        return;
+    }
 
     for family in [egui::FontFamily::Proportional, egui::FontFamily::Monospace] {
-        fonts
-            .families
-            .entry(family)
-            .or_default()
-            .insert(0, font_name.clone());
+        let family_fonts = fonts.families.entry(family).or_default();
+        for font_name in loaded_font_names.iter().rev() {
+            family_fonts.insert(0, font_name.clone());
+        }
     }
 
     ctx.set_fonts(fonts);
 }
 
-fn load_first_existing_font(paths: &[&str]) -> Option<(String, Vec<u8>)> {
-    paths.iter().find_map(|path| {
-        let path = Path::new(path);
-        let bytes = std::fs::read(path).ok()?;
-        let name = path.file_stem()?.to_string_lossy().to_string();
-        Some((name, bytes))
-    })
+fn load_existing_fonts(paths: &[&str]) -> Vec<(String, Vec<u8>)> {
+    paths
+        .iter()
+        .filter_map(|path| {
+            let path = Path::new(path);
+            let bytes = std::fs::read(path).ok()?;
+            let name = path.file_stem()?.to_string_lossy().to_string();
+            Some((name, bytes))
+        })
+        .collect()
+}
+
+fn phonetic_font_candidates() -> &'static [&'static str] {
+    &[
+        // Windows
+        "C:/Windows/Fonts/segoeui.ttf",
+        "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/calibri.ttf",
+        "C:/Windows/Fonts/times.ttf",
+        // macOS
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/System/Library/Fonts/Supplemental/Times New Roman.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+        // Linux
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+    ]
 }
 
 fn cjk_font_candidates() -> &'static [&'static str] {
