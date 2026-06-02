@@ -92,6 +92,24 @@ jobs:
           vt_api_key: ${{ secrets.VT_API_KEY }}
           files: |
             target/release/${{ matrix.binary_name }}
+      - name: Generate VirusTotal note
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+
+          binary="target/release/${{ matrix.binary_name }}"
+          sha256="$(sha256sum "$binary" | awk '{print $1}')"
+
+          {
+            echo "### ${{ matrix.name }}"
+            echo
+            echo "- 二进制文件：\`${{ matrix.binary_name }}\`"
+            echo "- SHA256：\`${sha256}\`"
+            echo "- VirusTotal 扫描地址：https://www.virustotal.com/gui/file/${sha256}"
+            echo
+          } > "dist/${{ matrix.artifact_name }}.vt.md"
       - name: Prepare package directory
         shell: bash
         run: |
@@ -118,7 +136,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARCHIVE_NAME }}
-          path: dist/${{ env.ARCHIVE_NAME }}.${{ matrix.archive_ext }}
+          path: |
+            dist/${{ env.ARCHIVE_NAME }}.${{ matrix.archive_ext }}
+            dist/${{ matrix.artifact_name }}.vt.md
           if-no-files-found: error
 
   release:
@@ -166,25 +186,39 @@ jobs:
 
             echo
             echo
-            echo "## 下载文件"
+            echo "## VirusTotal 扫描结果"
             echo
 
-            files=(dist/*.zip dist/*.tar.gz)
-            if [ ${#files[@]} -eq 0 ]; then
-              echo "未找到发布压缩包。"
+            vt_notes=(dist/*.vt.md)
+            if [ ${#vt_notes[@]} -eq 0 ]; then
+              echo "未找到 VirusTotal 扫描结果。"
             else
-              for file in "${files[@]}"; do
-                filename="$(basename "$file")"
-                sha256="$(sha256sum "$file" | awk '{print $1}')"
-
-                echo "### ${filename}"
-                echo
-                echo "- SHA256：\`${sha256}\`"
-                echo "- VirusTotal 扫描地址：https://www.virustotal.com/gui/file/${sha256}"
+              for note in "${vt_notes[@]}"; do
+                cat "$note"
                 echo
               done
             fi
 
+            echo
+            echo "## 下载文件"
+            echo
+
+            archives=(dist/*.zip dist/*.tar.gz)
+            if [ ${#archives[@]} -eq 0 ]; then
+              echo "未找到发布压缩包。"
+            else
+              for archive in "${archives[@]}"; do
+                filename="$(basename "$archive")"
+                sha256="$(sha256sum "$archive" | awk '{print $1}')"
+
+                echo "### ${filename}"
+                echo
+                echo "- 压缩包 SHA256：\`${sha256}\`"
+                echo
+              done
+            fi
+
+            echo
             echo "## 签名验证"
             echo
             echo "发布压缩包附带独立的 \`.sign\` 签名文件。"
@@ -241,7 +275,11 @@ jobs:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
           target_commitish: ${{ github.sha }}
           name: English2Anki ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
-          files: dist/*
+          files: |
+            dist/*.zip
+            dist/*.tar.gz
+            dist/*.sign
+            dist/public_key.pem
           body_path: RELEASE_NOTE.md
           prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
         env:
