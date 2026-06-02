@@ -128,12 +128,70 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
-      
+      - name: Generate release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          RELEASE_TAG="${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}"
+          RELEASE_NAME="English2Anki ${RELEASE_TAG}"
+
+          PREVIOUS_TAG="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
+
+          {
+            echo "# ${RELEASE_NAME}"
+            echo
+            echo "## 更新记录"
+            echo
+
+            if [ -n "$PREVIOUS_TAG" ]; then
+              echo "自 \`${PREVIOUS_TAG}\` 以来的变更："
+              echo
+              git log "${PREVIOUS_TAG}..HEAD" --pretty=format:'- %s (%h)' || true
+            else
+              echo "未找到上一个标签，以下是最近的提交记录："
+              echo
+              git log -20 --pretty=format:'- %s (%h)' || true
+            fi
+
+            echo
+            echo
+            echo "## 下载文件"
+            echo
+
+            files=(dist/*.zip dist/*.tar.gz)
+            if [ ${#files[@]} -eq 0 ]; then
+              echo "未找到发布压缩包。"
+            else
+              for file in "${files[@]}"; do
+                filename="$(basename "$file")"
+                sha256="$(sha256sum "$file" | awk '{print $1}')"
+
+                echo "### ${filename}"
+                echo
+                echo "- SHA256：\`${sha256}\`"
+                echo "- VirusTotal 扫描地址：https://www.virustotal.com/gui/file/${sha256}"
+                echo
+              done
+            fi
+
+            echo "## 签名验证"
+            echo
+            echo "发布压缩包附带独立的 \`.sign\` 签名文件。"
+            echo "公钥文件为 \`public_key.pem\`，可用于验证发布文件完整性。"
+          } > RELEASE_NOTE.md
+
+          cat RELEASE_NOTE.md
       - name: Sign release artifacts
         shell: bash
         env:
@@ -184,7 +242,7 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: English2Anki ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
           files: dist/*
-          generate_release_notes: true
+          body_path: RELEASE_NOTE.md
           prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
