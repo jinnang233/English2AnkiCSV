@@ -80,6 +80,13 @@ jobs:
       - name: Build release binary
         run: cargo build --release
 
+      - name: Read package version
+        shell: bash
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
+          echo "PACKAGE_VERSION=${version}" >> "${GITHUB_ENV}"
+          echo "ARCHIVE_NAME=${APP_NAME}-${version}-${{ matrix.name }}" >> "${GITHUB_ENV}"
+
       - name: Prepare package directory
         shell: bash
         run: |
@@ -93,20 +100,20 @@ jobs:
         run: |
           Compress-Archive `
             -Path "dist/${{ matrix.artifact_name }}/*" `
-            -DestinationPath "dist/${{ matrix.artifact_name }}.zip" `
+            -DestinationPath "dist/${env:ARCHIVE_NAME}.zip" `
             -Force
 
       - name: Create Unix archive
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          tar -czf "dist/${{ matrix.artifact_name }}.tar.gz" -C "dist/${{ matrix.artifact_name }}" .
+          tar -czf "dist/${ARCHIVE_NAME}.tar.gz" -C "dist/${{ matrix.artifact_name }}" .
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: dist/${{ matrix.artifact_name }}.${{ matrix.archive_ext }}
+          name: ${{ env.ARCHIVE_NAME }}
+          path: dist/${{ env.ARCHIVE_NAME }}.${{ matrix.archive_ext }}
           if-no-files-found: error
 
   release:
@@ -121,6 +128,49 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+
+      - name: Sign release artifacts
+        shell: bash
+        env:
+          SIGN_PRIVATE_KEY: ${{ secrets.RELEASE_SIGN_KEY }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          if [ -z "${SIGN_PRIVATE_KEY:-}" ]; then
+            echo "RELEASE_SIGN_KEY is not set; skipping artifact signing."
+            exit 0
+          fi
+
+          trap 'rm -f private_key.pem; echo "Cleaned up private key."' EXIT
+          umask 077
+          printf '%s\n' "$SIGN_PRIVATE_KEY" > private_key.pem
+
+          files=(dist/*.zip dist/*.tar.gz)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No release archives found to sign"
+            exit 1
+          fi
+
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            alpine/openssl pkey -pubout -in /work/private_key.pem -out /work/dist/public_key.pem
+
+          for file in "${files[@]}"; do
+            docker run --rm \
+              -v "$PWD:/work" \
+              -w /work \
+              alpine/openssl \
+              dgst \
+              -sign /work/private_key.pem \
+              -out "/work/${file}.sign" \
+              "/work/${file}"
+          done
+
+          rm -f private_key.pem
+          ls -la dist
+
       - name: Malware Scanner
         uses: dell/common-github-actions/malware-scanner@main
         with:
