@@ -1,6 +1,6 @@
 [package]
 name = "english2anki"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 license = "0BSD"
 
