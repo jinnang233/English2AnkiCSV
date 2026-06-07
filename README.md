@@ -1,12 +1,12 @@
 # English2AnkiCSV
 [![Build and Release](https://github.com/jinnang233/English2Anki/actions/workflows/release.yml/badge.svg)](https://github.com/jinnang233/English2Anki/actions/workflows/release.yml)[![CodeQL](https://github.com/jinnang233/English2Anki/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/jinnang233/English2Anki/actions/workflows/github-code-scanning/codeql)
 
-一个 Rust 桌面程序，用于批量查询英文单词释义，保存为本地 JSON，并导出为 Anki 可导入的 UTF-8 TSV/CSV。
+一个**实验性** Rust 桌面程序，用于批量查询英文单词释义，保存为本地 JSON，并导出为 Anki 可导入的 UTF-8 TSV/CSV。
 
 > [!WARNING]
 > 本项目代码由 **AI 辅助生成**。使用、修改、发布或集成前，请务必进行 **人工审查**，重点检查代码逻辑、网络请求、本地文件读写、依赖来源和许可证兼容性，并自行承担相应风险。
 > 
-> 在使用本项目的可执行文件前，请务必使用**VirusTotal**扫描代码，并使用**沙盒检查**。本项目**不能保证构建环境绝对干净安全**，**如果您对此有顾虑，请不要使用本软件**。
+> 在使用本项目的可执行文件前，请务必使用**VirusTotal**扫描代码，并使用**沙盒检查**。本项目**不能保证构建环境绝对干净安全**，**因此也不能保证最终构建产物一定没有木马病毒**，**如果您对此有顾虑，请不要使用本软件**。
 >
 > 如果您发现任何代码安全性问题，或者发现任何版权或许可证问题，请在Issues中提出。感谢您的理解。 
 
